@@ -96,15 +96,22 @@ exports.insertSearchParams = (req, res) => {
 // ===============================
 exports.getSearchParams = (req, res) => {
   const sql = `
-    SELECT id, fullname, companyName, role, email_address 
-    FROM searchparams 
-    WHERE status = 1
-    ORDER BY id DESC
+    SELECT 
+      s.id AS search_id,
+      s.fullname,
+      s.companyName,
+      s.role,
+      s.email_address,
+      a.responce_results
+    FROM searchparams s
+    LEFT JOIN ai_responce a 
+      ON a.search_id = s.id
+    WHERE s.status = 1
+    ORDER BY s.id DESC
   `;
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error(err);
       return res.status(500).json({
         status: 500,
         success: false,
@@ -113,12 +120,12 @@ exports.getSearchParams = (req, res) => {
     }
 
     const formattedData = results.map(row => ({
-      id: row.id,
+      search_id: row.search_id,
       name: row.fullname,
       companyName: row.companyName,
       role: row.role,
-      response: row.responce_results,
-      email: row.email_address
+      email: row.email_address,
+      responce_results: row.responce_results || null
     }));
 
     res.status(200).json({
@@ -131,21 +138,29 @@ exports.getSearchParams = (req, res) => {
 
 
 
+
 // ===============================
 // Get Record By ID
 // ===============================
 exports.getSearchParamById = (req, res) => {
-  const id = req.params.id;
+  const searchId = req.params.id;
 
   const sql = `
-    SELECT fullname, companyName, role, email_address
-    FROM searchparams 
-    WHERE id = ? AND status = 1
+    SELECT 
+      s.id AS search_id,
+      s.fullname,
+      s.companyName,
+      s.role,
+      s.email_address,
+      a.responce_results
+    FROM searchparams s
+    LEFT JOIN ai_responce a 
+      ON a.search_id = s.id
+    WHERE s.id = ? AND s.status = 1
   `;
 
-  db.query(sql, [id], (err, results) => {
+  db.query(sql, [searchId], (err, results) => {
     if (err) {
-      console.error(err);
       return res.status(500).json({
         status: 500,
         success: false,
@@ -167,12 +182,14 @@ exports.getSearchParamById = (req, res) => {
       status: 200,
       success: true,
       data: {
+        search_id: row.search_id,
         name: row.fullname,
         companyName: row.companyName,
         role: row.role,
-        email: row.email_address
-        
+        email: row.email_address,
+        responce_results: row.responce_results || null
       }
     });
   });
 };
+
