@@ -4,7 +4,7 @@ const db = require("../config/db");
 // Insert Record
 // ===============================
 exports.insertSearchParams = (req, res) => {
-  const { fullname, companyName, role, email_address, responce_results, status } = req.body;
+  const { fullname, companyName, role, email_address,requirement,budget, responce_results, status } = req.body;
 
   // Validation
   if (!fullname || fullname.trim() === "") {
@@ -20,6 +20,18 @@ exports.insertSearchParams = (req, res) => {
       message: "Company name is required"
     });
   }
+  if (!requirement || requirement.trim() === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Requirement is required"
+    });
+  }
+  if (!budget || budget.trim() === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Budget is required"
+    });
+  }
 
   if (!responce_results || responce_results.trim() === "") {
     return res.status(400).json({
@@ -31,7 +43,7 @@ exports.insertSearchParams = (req, res) => {
   // Step 1: Insert into searchparams table
   const searchSql = `
     INSERT INTO searchparams 
-    (fullname, companyName, role, email_address, status) 
+    (fullname, companyName, role, email_address, requirement, budget, status) 
     VALUES (?, ?, ?, ?, ?)
   `;
 
@@ -42,6 +54,8 @@ exports.insertSearchParams = (req, res) => {
       companyName,
       role || "",
       email_address || "",
+      requirement,
+      budget,
       status || 1
     ],
     (err, result) => {
@@ -102,10 +116,21 @@ exports.getSearchParams = (req, res) => {
       s.companyName,
       s.role,
       s.email_address,
-      a.responce_results
+      s.requirement,
+      s.budget,
+
+      a.responce_results,
+      c.chat_history,
+      c.date_time AS chat_date_time
+
     FROM searchparams s
+
     LEFT JOIN ai_responce a 
       ON a.search_id = s.id
+
+    LEFT JOIN chathistory c
+      ON c.search_id = s.id
+
     WHERE s.status = 1
     ORDER BY s.id DESC
   `;
@@ -119,29 +144,31 @@ exports.getSearchParams = (req, res) => {
       });
     }
 
-    const formattedData = results.map(row => ({
+    const data = results.map(row => ({
       search_id: row.search_id,
       name: row.fullname,
       companyName: row.companyName,
       role: row.role,
       email: row.email_address,
-      responce_results: row.responce_results || null
+      requirement: row.requirement,
+      budget: row.budget,
+      responce_results: row.responce_results || null,
+      chat_history: row.chat_history || null,
+      chat_date_time: row.chat_date_time || null
     }));
 
     res.status(200).json({
       status: 200,
       success: true,
-      data: formattedData
+      data
     });
   });
 };
 
 
-
-
-// ===============================
-// Get Record By ID
-// ===============================
+// ======================================
+// GET SEARCH PARAM BY SEARCH ID
+// ======================================
 exports.getSearchParamById = (req, res) => {
   const searchId = req.params.id;
 
@@ -152,10 +179,21 @@ exports.getSearchParamById = (req, res) => {
       s.companyName,
       s.role,
       s.email_address,
-      a.responce_results
+      s.requirement,
+      s.budget,
+
+      a.responce_results,
+      c.chat_history,
+      c.date_time AS chat_date_time
+
     FROM searchparams s
+
     LEFT JOIN ai_responce a 
       ON a.search_id = s.id
+
+    LEFT JOIN chathistory c
+      ON c.search_id = s.id
+
     WHERE s.id = ? AND s.status = 1
   `;
 
@@ -187,9 +225,12 @@ exports.getSearchParamById = (req, res) => {
         companyName: row.companyName,
         role: row.role,
         email: row.email_address,
-        responce_results: row.responce_results || null
+        requirement: row.requirement,
+        budget: row.budget,
+        responce_results: row.responce_results || null,
+        chat_history: row.chat_history || null,
+        chat_date_time: row.chat_date_time || null
       }
     });
   });
 };
-
