@@ -7,6 +7,7 @@ const db = require("../config/db");
 exports.insertChatHistory = (req, res) => {
   const { serach_id, chat_history } = req.body;
 
+  // Validation
   if (!serach_id) {
     return res.status(400).json({
       status: 400,
@@ -23,10 +24,10 @@ exports.insertChatHistory = (req, res) => {
     });
   }
 
-  // ✅ Validate serach_id exists in searchparams table
-  const checkSql = "SELECT id FROM searchparams WHERE id = ?";
+  // 1️⃣ Validate serach_id exists in searchparams
+  const checkSearchSql = "SELECT id FROM searchparams WHERE id = ?";
 
-  db.query(checkSql, [serach_id], (err, result) => {
+  db.query(checkSearchSql, [serach_id], (err, searchResult) => {
     if (err) {
       return res.status(500).json({
         status: 500,
@@ -35,7 +36,7 @@ exports.insertChatHistory = (req, res) => {
       });
     }
 
-    if (result.length === 0) {
+    if (searchResult.length === 0) {
       return res.status(400).json({
         status: 400,
         success: false,
@@ -43,29 +44,69 @@ exports.insertChatHistory = (req, res) => {
       });
     }
 
-    // Insert into chathistory
-    const insertSql = `
-      INSERT INTO chathistory (serach_id, chat_history)
-      VALUES (?, ?)
-    `;
+    // 2️⃣ Check if chat history already exists
+    const checkChatSql = "SELECT id FROM chathistory WHERE serach_id = ?";
 
-    db.query(insertSql, [serach_id, chat_history], (err, insertResult) => {
+    db.query(checkChatSql, [serach_id], (err, chatResult) => {
       if (err) {
         return res.status(500).json({
           status: 500,
           success: false,
-          message: "Insert failed"
+          message: "Database error"
         });
       }
 
-      res.status(200).json({
-        status: 200,
-        success: true,
-        insertedId: insertResult.insertId
-      });
+      // 🔁 UPDATE if exists
+      if (chatResult.length > 0) {
+        const updateSql = `
+          UPDATE chathistory 
+          SET chat_history = ?, date_time = CURRENT_TIMESTAMP
+          WHERE serach_id = ?
+        `;
+
+        db.query(updateSql, [chat_history, serach_id], (err) => {
+          if (err) {
+            return res.status(500).json({
+              status: 500,
+              success: false,
+              message: "Update failed"
+            });
+          }
+
+          return res.status(200).json({
+            status: 200,
+            success: true,
+            message: "Chat history updated successfully"
+          });
+        });
+      } 
+      // ➕ INSERT if not exists
+      else {
+        const insertSql = `
+          INSERT INTO chathistory (serach_id, chat_history)
+          VALUES (?, ?)
+        `;
+
+        db.query(insertSql, [serach_id, chat_history], (err, insertResult) => {
+          if (err) {
+            return res.status(500).json({
+              status: 500,
+              success: false,
+              message: "Insert failed"
+            });
+          }
+
+          return res.status(200).json({
+            status: 200,
+            success: true,
+            insertedId: insertResult.insertId
+          });
+        });
+      }
     });
   });
 };
+
 
 
 
