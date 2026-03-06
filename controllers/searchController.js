@@ -4,7 +4,7 @@ const db = require("../config/db");
 // Insert Record
 // ===============================
 exports.insertSearchParams = (req, res) => {
-  const { fullname, companyName, role, email_address,requirement,budget, responce_results, status } = req.body;
+  const { fullname, companyName, role, email_address,requirement,budget, responce_results, search_params,status } = req.body;
 
   // Validation
   if (!fullname || fullname.trim() === "") {
@@ -39,12 +39,13 @@ exports.insertSearchParams = (req, res) => {
       message: "Response result is required"
     });
   }
+  
 
   // Step 1: Insert into searchparams table
   const searchSql = `
     INSERT INTO searchparams 
-    (fullname, companyName, role, email_address, requirement, budget, status) 
-    VALUES (?, ?, ?, ?, ?)
+    (fullname, companyName, role, email_address, requirement, budget,search_params,status) 
+    VALUES (?, ?, ?, ?, ?,?,?,?)
   `;
 
   db.query(
@@ -56,6 +57,7 @@ exports.insertSearchParams = (req, res) => {
       email_address || "",
       requirement,
       budget,
+      search_params,
       status || 1
     ],
     (err, result) => {

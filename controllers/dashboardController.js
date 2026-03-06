@@ -15,10 +15,12 @@ exports.getDashboardStats = (req, res) => {
 
   db.query(totalLeadsSql, (err, totalResult) => {
     if (err) {
+      console.error("Dashboard stats error:", err);
       return res.status(500).json({
         status: 500,
         success: false,
-        message: "Database error"
+        message: "Database error",
+        error: err.message
       });
     }
 
@@ -26,10 +28,12 @@ exports.getDashboardStats = (req, res) => {
 
     db.query(enrichedSql, (err, enrichedResult) => {
       if (err) {
+        console.error("Dashboard stats error:", err);
         return res.status(500).json({
           status: 500,
           success: false,
-          message: "Database error"
+          message: "Database error",
+          error: err.message
         });
       }
 
