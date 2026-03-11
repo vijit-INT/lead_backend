@@ -16,7 +16,7 @@ app.use("/api", responseRoutes);
 app.use("/api", chatHistoryRoutes);
 app.use("/api", dashboardRoutes);
 
-const PORT = 8082;
+const PORT = 8134;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
