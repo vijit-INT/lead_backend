@@ -1,24 +1,24 @@
 const mysql = require("mysql2");
 
 // Using a pool is better for Express apps as it handles multiple connections and reconnections
-const pool = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "again_hec_db",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-});
 // const pool = mysql.createPool({
-//   host: "192.168.1.205",
-//   user: "lead_scoring_dev_db_user",
-//   password: "EeeQC29goGSV",
-//   database: "lead_scoring_dev_db",
+//   host: "localhost",
+//   user: "root",
+//   password: "",
+//   database: "again_hec_db",
 //   waitForConnections: true,
 //   connectionLimit: 10,
 //   queueLimit: 0,
 // });
+const pool = mysql.createPool({
+  host: "192.168.1.205",
+  user: "lead_scoring_dev_db_user",
+  password: "EeeQC29goGSV",
+  database: "lead_scoring_dev_db",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
 // Test the connection
 pool.getConnection((err, connection) => {
