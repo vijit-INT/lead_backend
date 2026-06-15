@@ -1,4 +1,5 @@
 const axios = require("axios");
+const https = require("https");
 const FormData = require("form-data");
 const {
   findLinkedInProfile,
@@ -10,6 +11,10 @@ const {
 const { enrichProfile } = require("../lib/gemini");
 const { generateLeadReportPDF } = require("../lib/pdfGenerator");
 const db = require("../config/db");
+
+const zohoAxios = axios.create({
+  httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+});
 
 let cachedToken = null;
 let tokenExpiry = null;
@@ -31,13 +36,16 @@ const getZohoAccessToken = async () => {
       throw new Error("Missing Zoho OAuth credentials in .env");
     }
 
-    const response = await axios.post(
-      `https://accounts.zoho.in/oauth/v2/token?refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}&grant_type=refresh_token`
-    );
+    const url = `https://accounts.zoho.in/oauth/v2/token?refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}&grant_type=refresh_token`;
+    console.log("[Zoho OAuth] Requesting URL:", url);
+
+    const response = await zohoAxios.post(url);
+
+    console.log("[Zoho OAuth] Response status:", response.status);
+    console.log("[Zoho OAuth] Response data:", JSON.stringify(response.data, null, 2));
 
     if (response.data.access_token) {
       cachedToken = response.data.access_token;
-      // Expires in 3600 seconds (1 hour). Subtract 5 mins (300,000 ms) as a buffer
       tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 300000;
       console.log("[Zoho OAuth] Successfully refreshed access token.");
       return cachedToken;
@@ -46,6 +54,10 @@ const getZohoAccessToken = async () => {
     }
   } catch (error) {
     console.error("[Zoho OAuth] Failed to refresh token:", error.message);
+    if (error.response) {
+      console.error("[Zoho OAuth] Error status:", error.response.status);
+      console.error("[Zoho OAuth] Error data:", JSON.stringify(error.response.data, null, 2));
+    }
     return null;
   }
 };
@@ -80,7 +92,7 @@ exports.handleZohoWebhook = async (req, res) => {
     };
 
     // 2. Fetch Lead Details from Zoho CRM (using .in domain)
-    const leadResponse = await axios.get(`https://www.zohoapis.in/crm/v8/Leads/${leadId}`, { headers });
+    const leadResponse = await zohoAxios.get(`https://www.zohoapis.in/crm/v8/Leads/${leadId}`, { headers });
     const leadData = leadResponse.data.data[0];
 
     if (!leadData) {
@@ -88,14 +100,25 @@ exports.handleZohoWebhook = async (req, res) => {
       return;
     }
 
-    const name = `${leadData.First_Name || ''} ${leadData.Last_Name || ''}`.trim() || "Unknown";
-    const companyName = leadData.Company || "";
-    const email = leadData.Email || "";
-    const companyUrl = leadData.Website || "";
-    const role = leadData.Designation || "";
-    const mobile = leadData.Mobile || "";
-    const requirement = leadData.Description || "General Requirement";
-    const budget = "400000"; // Default budget
+    // Parse HubSpot payload for enriched fallback fields
+    let hubspot = {};
+    try {
+      if (leadData.Complete_Hubspot_Payload) {
+        hubspot = JSON.parse(leadData.Complete_Hubspot_Payload);
+      }
+    } catch (_) {}
+
+    const name = `${leadData.First_Name || ''} ${leadData.Last_Name || ''}`.trim()
+      || leadData.Full_Name
+      || hubspot.firstname
+      || "Unknown";
+    const companyName = leadData.Company || hubspot.company || "";
+    const email = leadData.Email || hubspot.email || "";
+    const companyUrl = leadData.Website || hubspot.hs_analytics_first_url || "";
+    const role = leadData.Designation || hubspot.your_role || "";
+    const mobile = leadData.Mobile || leadData.Phone || hubspot.phone || "";
+    const requirement = leadData.Description || leadData.Requirement || hubspot.requirements || "General Requirement";
+    const budget = leadData.What_is_your_budget || hubspot.what_is_your_budget || "Not specified";
 
     console.log(`[Zoho Webhook] Fetched Lead: ${name} (${companyName})`);
 
@@ -155,7 +178,7 @@ exports.handleZohoWebhook = async (req, res) => {
       ...form.getHeaders()
     };
 
-    const uploadResponse = await axios.post(
+    const uploadResponse = await zohoAxios.post(
       `https://www.zohoapis.in/crm/v8/Leads/${leadId}/Attachments`,
       form,
       { headers: uploadHeaders }
@@ -178,7 +201,7 @@ exports.handleZohoWebhook = async (req, res) => {
       ]
     };
 
-    const updateResponse = await axios.put(
+    const updateResponse = await zohoAxios.put(
       `https://www.zohoapis.in/crm/v8/Leads`,
       updatePayload,
       { headers: {
