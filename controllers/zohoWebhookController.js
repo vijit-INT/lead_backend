@@ -94,7 +94,6 @@ exports.handleZohoWebhook = async (req, res) => {
     // 2. Fetch Lead Details from Zoho CRM (using .in domain)
     const leadResponse = await zohoAxios.get(`https://www.zohoapis.in/crm/v8/Leads/${leadId}`, { headers });
     const leadData = leadResponse.data.data[0];
-
     if (!leadData) {
       console.error(`[Zoho Webhook] Lead data not found for ID: ${leadId}`);
       return;
@@ -106,10 +105,10 @@ exports.handleZohoWebhook = async (req, res) => {
       if (leadData.Complete_Hubspot_Payload) {
         hubspot = JSON.parse(leadData.Complete_Hubspot_Payload);
       }
-    } catch (_) {}
+    } catch (_) { }
 
-    const name = `${leadData.First_Name || ''} ${leadData.Last_Name || ''}`.trim()
-      || leadData.Full_Name
+    const name = leadData.Full_Name
+      || `${leadData.First_Name || ''} ${leadData.Last_Name || ''}`.trim()
       || hubspot.firstname
       || "Unknown";
     const companyName = leadData.Company || hubspot.company || "";
@@ -216,7 +215,8 @@ exports.handleZohoWebhook = async (req, res) => {
     const updateResponse = await zohoAxios.put(
       `https://www.zohoapis.in/crm/v8/Leads`,
       updatePayload,
-      { headers: {
+      {
+        headers: {
           Authorization: `Zoho-oauthtoken ${accessToken}`,
           "Content-Type": "application/json"
         }

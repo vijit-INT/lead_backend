@@ -22,7 +22,7 @@ app.use("/api", dashboardRoutes);
 app.use("/api", agentRoutes);
 app.use("/api", zohoWebhookRoutes);
 
-const PORT = 8134;
+const PORT = process.env.PORT || 9443;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
