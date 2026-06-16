@@ -166,21 +166,21 @@ exports.handleZohoWebhook = async (req, res) => {
     const pdfBuffer = await generateLeadReportPDF(userData, enrichedData);
 
     // 5.5 Save PDF locally
-    const fs = require("fs");
-    const path = require("path");
-    const reportsDir = path.join(__dirname, "..", "reports");
-    if (!fs.existsSync(reportsDir)) {
-      fs.mkdirSync(reportsDir, { recursive: true });
-    }
-    const fileName = `AI_Investigation_Report_${name.replace(/\s+/g, "_")}.pdf`;
-    const filePath = path.join(reportsDir, fileName);
-    fs.writeFileSync(filePath, pdfBuffer);
-    console.log(`[Zoho Webhook] PDF Report saved locally at: ${filePath}`);
+    // const fs = require("fs");
+    // const path = require("path");
+    // const reportsDir = path.join(__dirname, "..", "reports");
+    // if (!fs.existsSync(reportsDir)) {
+    //   fs.mkdirSync(reportsDir, { recursive: true });
+    // }
+    // const fileName = `AI_Investigation_Report_${name.replace(/\s+/g, "_")}.pdf`;
+    // const filePath = path.join(reportsDir, fileName);
+    // fs.writeFileSync(filePath, pdfBuffer);
+    // console.log(`[Zoho Webhook] PDF Report saved locally at: ${filePath}`);
 
     // 6. Upload PDF to Zoho CRM
     const form = new FormData();
     form.append("file", pdfBuffer, {
-      filename: `AI_Investigation_Report_${name.replace(/\\s+/g, "_")}.pdf`,
+      filename: `AI_Investigation_Report_${name.replace(/\s+/g, "_")}.pdf`,
       contentType: "application/pdf"
     });
 
